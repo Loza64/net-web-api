@@ -1,0 +1,160 @@
+@host = https://localhost:7001
+# Mismos valores que SuperAdmin__Email y SuperAdmin__Password de tu archivo .env
+@adminEmail = superadmin@example.com
+@adminPassword = ChangeMe123
+
+### Login (guarda el token automáticamente)
+# @name login
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{adminEmail}}",
+  "password": "{{adminPassword}}"
+}
+
+@token = {{login.response.body.$.token}}
+@refresh = {{login.response.body.$.refreshToken}}
+
+### Registro (rol ADMIN por defecto, devuelve { token, refreshToken, data })
+POST {{host}}/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "ana",
+  "email": "ana@example.com",
+  "password": "Ana12345",
+  "name": "Ana",
+  "surname": "Perez"
+}
+
+### GET profile
+
+GET {{host}}/api/auth/profile
+Authorization: Bearer {{token}}
+
+### PUT profile
+PUT {{host}}/api/auth/profile
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "username": "superadmin",
+  "email": "{{adminEmail}}",
+  "name": "Super",
+  "surname": "Admin",
+  "photo": null
+}
+
+### Cambiar contraseña (cierra todas tus sesiones; el super admin no puede: usa SuperAdmin__Password)
+PUT {{host}}/api/auth/profile/password
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "currentPassword": "Ana12345",
+  "newPassword": "Ana54321"
+}
+
+### Listar usuarios (requiere permiso users.read)
+GET {{host}}/api/users?page=1&pageSize=20
+Authorization: Bearer {{token}}
+
+### Refresh (repetirlo con el mismo token debe dar 401)
+POST {{host}}/api/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "{{refresh}}"
+}
+
+### Logout
+POST {{host}}/api/auth/logout
+Content-Type: application/json
+
+{
+  "refreshToken": "{{refresh}}"
+}
+
+### ===== USERS =====
+
+### Listar con filtros y orden
+GET {{host}}/api/users?page=1&pageSize=10&search=super&blocked=false&sortBy=email&desc=false
+Authorization: Bearer {{token}}
+
+### Obtener uno
+GET {{host}}/api/users/1
+Authorization: Bearer {{token}}
+
+### Crear (roleId 2 = ADMIN en la semilla; verifica con GET /api/roles. El rol SuperAdmin no se puede asignar)
+POST {{host}}/api/users
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "username": "luis",
+  "email": "luis@example.com",
+  "password": "Luis12345",
+  "name": "Luis",
+  "surname": "Gomez",
+  "roleId": 2
+}
+
+### Actualizar
+PUT {{host}}/api/users/2
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "username": "luis",
+  "email": "luis@example.com",
+  "name": "Luis",
+  "surname": "Gomez",
+  "roleId": 2,
+  "blocked": false
+}
+
+### Eliminar (soft delete)
+DELETE {{host}}/api/users/2
+Authorization: Bearer {{token}}
+
+### ===== ROLES =====
+
+### Listar
+GET {{host}}/api/roles?search=&active=true&sortBy=name
+Authorization: Bearer {{token}}
+
+### Detalle (con permisos)
+GET {{host}}/api/roles/2
+Authorization: Bearer {{token}}
+
+### Crear
+POST {{host}}/api/roles
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "name": "Supervisor", "active": true }
+
+### Actualizar
+PUT {{host}}/api/roles/3
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "name": "Supervisor", "active": true }
+
+### Asignar permisos (ids de GET /api/permissions)
+PUT {{host}}/api/roles/3/permissions
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "permissionIds": [1] }
+
+### Eliminar rol (falla con 409 si tiene usuarios)
+DELETE {{host}}/api/roles/3
+Authorization: Bearer {{token}}
+
+### ===== PERMISSIONS =====
+
+### Listar catálogo
+GET {{host}}/api/permissions?search=users
+Authorization: Bearer {{token}}
