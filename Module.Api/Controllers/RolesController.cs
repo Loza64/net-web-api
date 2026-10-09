@@ -12,7 +12,7 @@ namespace Module.Api.Controllers;
 public class RolesController(IRoleService roles) : ControllerBase
 {
     [HttpGet, HasPermission(PermissionNames.RolesRead)]
-    public Task<PagedResult<RoleSummary>> List([FromQuery] RoleListQuery query, CancellationToken ct) =>
+    public Task<PagedResult<RoleDetail>> List([FromQuery] RoleListQuery query, CancellationToken ct) =>
         roles.ListAsync(query, ct);
 
     [HttpGet("{id:long}"), HasPermission(PermissionNames.RolesRead)]
@@ -33,6 +33,13 @@ public class RolesController(IRoleService roles) : ControllerBase
     public async Task<IActionResult> Delete(long id, CancellationToken ct)
     {
         await roles.DeleteAsync(id, ct);
+        return NoContent();
+    }
+
+    [HttpPatch("{id:long}/restore"), HasPermission(PermissionNames.RolesManage)]
+    public async Task<IActionResult> Restore(long id, CancellationToken ct)
+    {
+        await roles.RestoreAsync(id, ct);
         return NoContent();
     }
 

@@ -8,11 +8,17 @@ public class RoleListQueryValidator : AbstractValidator<RoleListQuery>
     public RoleListQueryValidator()
     {
         RuleFor(x => x.Page).Page();
-        RuleFor(x => x.PageSize).PageSize();
+        RuleFor(x => x.Size).PageSize();
         RuleFor(x => x.Search).Search();
-        RuleFor(x => x.SortBy)
-            .Must(value => string.IsNullOrWhiteSpace(value)
-                           || new[] { "id", "name" }.Contains(value, StringComparer.OrdinalIgnoreCase))
-            .WithMessage("El orden debe ser id o name.");
+        RuleFor(x => x.Sort)
+            .Must(values => values is null || values.All(value =>
+            {
+                var parts = value.Split(',', StringSplitOptions.TrimEntries);
+                return parts.Length is 1 or 2
+                       && new[] { "id", "name" }.Contains(parts[0], StringComparer.OrdinalIgnoreCase)
+                       && (parts.Length == 1 || new[] { "asc", "desc" }
+                           .Contains(parts[1], StringComparer.OrdinalIgnoreCase));
+            }))
+            .WithMessage("El orden debe usar id o name y la dirección asc o desc.");
     }
 }

@@ -11,17 +11,17 @@ namespace Module.Application.Services;
 
 public interface IProfileService
 {
-    Task<UserDetail> GetAsync(long userId, CancellationToken ct);
-    Task<UserDetail> UpdateAsync(long userId, UpdateProfileRequest request, CancellationToken ct);
+    Task<ProfileResponse> GetAsync(long userId, CancellationToken ct);
+    Task<ProfileResponse> UpdateAsync(long userId, UpdateProfileRequest request, CancellationToken ct);
     Task ChangePasswordAsync(long userId, ChangePasswordRequest request, CancellationToken ct);
 }
 
 public class ProfileService(IApplicationDbContext db, IPasswordHasher hasher) : IProfileService
 {
-    public async Task<UserDetail> GetAsync(long userId, CancellationToken ct) =>
-        (await LoadAsync(userId, ct)).ToDetail();
+    public async Task<ProfileResponse> GetAsync(long userId, CancellationToken ct) =>
+        (await LoadAsync(userId, ct)).ToProfileResponse();
 
-    public async Task<UserDetail> UpdateAsync(long userId, UpdateProfileRequest request, CancellationToken ct)
+    public async Task<ProfileResponse> UpdateAsync(long userId, UpdateProfileRequest request, CancellationToken ct)
     {
         var user = await LoadAsync(userId, ct);
 
@@ -40,10 +40,9 @@ public class ProfileService(IApplicationDbContext db, IPasswordHasher hasher) : 
         user.Email = email;
         user.Name = request.Name.Trim();
         user.Surname = request.Surname.Trim();
-        user.Photo = string.IsNullOrWhiteSpace(request.Photo) ? null : request.Photo.Trim();
         await db.SaveChangesAsync(ct);
 
-        return user.ToDetail();
+        return user.ToProfileResponse();
     }
 
     public async Task ChangePasswordAsync(long userId, ChangePasswordRequest request, CancellationToken ct)
@@ -55,6 +54,9 @@ public class ProfileService(IApplicationDbContext db, IPasswordHasher hasher) : 
 
         if (!hasher.Verify(request.CurrentPassword, user.Password))
             throw AppException.BadRequest("La contraseña actual es incorrecta.");
+
+        if (request.NewPassword != request.ConfirmNewPassword)
+            throw AppException.BadRequest("La confirmación de contraseña no coincide.");
 
         user.Password = hasher.Hash(request.NewPassword);
         await db.SaveChangesAsync(ct);

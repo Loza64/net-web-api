@@ -10,5 +10,7 @@ public class ChangePasswordRequestValidator : AbstractValidator<ChangePasswordRe
         RuleFor(x => x.CurrentPassword).NotEmpty();
         RuleFor(x => x.NewPassword).StrongPassword()
             .NotEqual(x => x.CurrentPassword).WithMessage("La nueva contraseña debe ser distinta de la actual.");
+        RuleFor(x => x.ConfirmNewPassword)
+            .Equal(x => x.NewPassword).WithMessage("La confirmación de contraseña no coincide.");
     }
 }

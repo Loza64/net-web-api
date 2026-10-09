@@ -20,10 +20,10 @@ public class AuthService(IApplicationDbContext db, IPasswordHasher hasher, IToke
 {
     public async Task<AuthResponse> LoginAsync(LoginRequest request, CancellationToken ct)
     {
-        var email = request.Email.Trim().ToLowerInvariant();
+        var username = request.Username.Trim().ToLowerInvariant();
         var user = await db.Users
             .Include(u => u.Role).ThenInclude(r => r.Permissions)
-            .FirstOrDefaultAsync(u => u.Email == email, ct);
+            .FirstOrDefaultAsync(u => u.Username == username || u.Email == username, ct);
 
         if (user is null || !hasher.Verify(request.Password, user.Password))
             throw AppException.Unauthorized();
@@ -131,6 +131,6 @@ public class AuthService(IApplicationDbContext db, IPasswordHasher hasher, IToke
         });
         await db.SaveChangesAsync(ct);
 
-        return new AuthResponse(tokens.CreateAccessToken(user), refresh.Raw, user.ToDetail());
+        return new AuthResponse(tokens.CreateAccessToken(user), refresh.Raw, user.ToProfileResponse());
     }
 }

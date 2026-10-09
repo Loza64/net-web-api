@@ -17,7 +17,7 @@ internal static class Rules
             .Matches("[0-9]").WithMessage("Debe contener un número.");
 
     public static IRuleBuilderOptions<T, int> Page<T>(this IRuleBuilder<T, int> r) =>
-        r.GreaterThanOrEqualTo(1);
+        r.GreaterThanOrEqualTo(0);
 
     public static IRuleBuilderOptions<T, int> PageSize<T>(this IRuleBuilder<T, int> r) =>
         r.InclusiveBetween(1, 100);

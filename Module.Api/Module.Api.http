@@ -1,4 +1,4 @@
-@host = https://localhost:7001
+@host = https://localhost:63202
 # Mismos valores que SuperAdmin__Email y SuperAdmin__Password de tu archivo .env
 @adminEmail = superadmin@example.com
 @adminPassword = ChangeMe123
@@ -9,7 +9,7 @@ POST {{host}}/api/auth/login
 Content-Type: application/json
 
 {
-  "email": "{{adminEmail}}",
+  "username": "{{adminEmail}}",
   "password": "{{adminPassword}}"
 }
 
@@ -17,7 +17,7 @@ Content-Type: application/json
 @refresh = {{login.response.body.$.refreshToken}}
 
 ### Registro (rol ADMIN por defecto, devuelve { token, refreshToken, data })
-POST {{host}}/api/auth/register
+POST {{host}}/api/auth/signup
 Content-Type: application/json
 
 {
@@ -42,22 +42,22 @@ Content-Type: application/json
   "username": "superadmin",
   "email": "{{adminEmail}}",
   "name": "Super",
-  "surname": "Admin",
-  "photo": null
+  "surname": "Admin"
 }
 
 ### Cambiar contraseña (cierra todas tus sesiones; el super admin no puede: usa SuperAdmin__Password)
-PUT {{host}}/api/auth/profile/password
+PATCH {{host}}/api/auth/password
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
   "currentPassword": "Ana12345",
-  "newPassword": "Ana54321"
+  "newPassword": "Ana54321",
+  "confirmNewPassword": "Ana54321"
 }
 
 ### Listar usuarios (requiere permiso users.read)
-GET {{host}}/api/users?page=1&pageSize=20
+GET {{host}}/api/users?page=0&size=20
 Authorization: Bearer {{token}}
 
 ### Refresh (repetirlo con el mismo token debe dar 401)
@@ -79,14 +79,14 @@ Content-Type: application/json
 ### ===== USERS =====
 
 ### Listar con filtros y orden
-GET {{host}}/api/users?page=1&pageSize=10&search=super&blocked=false&sortBy=email&desc=false
+GET {{host}}/api/users?page=0&size=10&search=super&blocked=false&sort=email,asc
 Authorization: Bearer {{token}}
 
 ### Obtener uno
 GET {{host}}/api/users/1
 Authorization: Bearer {{token}}
 
-### Crear (roleId 2 = ADMIN en la semilla; verifica con GET /api/roles. El rol SuperAdmin no se puede asignar)
+### Crear (rol 2 = ADMIN en la semilla; verifica con GET /api/roles. El rol SuperAdmin no se puede asignar)
 POST {{host}}/api/users
 Authorization: Bearer {{token}}
 Content-Type: application/json
@@ -97,7 +97,7 @@ Content-Type: application/json
   "password": "Luis12345",
   "name": "Luis",
   "surname": "Gomez",
-  "roleId": 2
+  "role": { "id": 2 }
 }
 
 ### Actualizar
@@ -110,18 +110,22 @@ Content-Type: application/json
   "email": "luis@example.com",
   "name": "Luis",
   "surname": "Gomez",
-  "roleId": 2,
-  "blocked": false
+  "blocked": false,
+  "role": { "id": 2 }
 }
 
 ### Eliminar (soft delete)
 DELETE {{host}}/api/users/2
 Authorization: Bearer {{token}}
 
+### Restaurar usuario eliminado
+PATCH {{host}}/api/users/2/restore
+Authorization: ******
+
 ### ===== ROLES =====
 
 ### Listar
-GET {{host}}/api/roles?search=&active=true&sortBy=name
+GET {{host}}/api/roles?page=0&size=20&search=&active=true&sort=name,asc
 Authorization: Bearer {{token}}
 
 ### Detalle (con permisos)
@@ -133,14 +137,14 @@ POST {{host}}/api/roles
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
-{ "name": "Supervisor", "active": true }
+{ "name": "Supervisor", "active": true, "permissions": [{ "id": 1 }] }
 
 ### Actualizar
 PUT {{host}}/api/roles/3
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
-{ "name": "Supervisor", "active": true }
+{ "name": "Supervisor", "active": true, "permissions": [{ "id": 1 }] }
 
 ### Asignar permisos (ids de GET /api/permissions)
 PUT {{host}}/api/roles/3/permissions
@@ -153,8 +157,19 @@ Content-Type: application/json
 DELETE {{host}}/api/roles/3
 Authorization: Bearer {{token}}
 
+### Restaurar rol eliminado
+PATCH {{host}}/api/roles/3/restore
+Authorization: ******
+
 ### ===== PERMISSIONS =====
 
+### Actualizar título de permiso
+PUT {{host}}/api/permissions/1
+Authorization: ******
+Content-Type: application/json
+
+{ "title": "Consultar usuarios" }
+
 ### Listar catálogo
-GET {{host}}/api/permissions?search=users
+GET {{host}}/api/permissions?page=0&size=30&search=users
 Authorization: Bearer {{token}}

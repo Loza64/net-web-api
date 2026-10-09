@@ -8,11 +8,17 @@ public class PermissionListQueryValidator : AbstractValidator<PermissionListQuer
     public PermissionListQueryValidator()
     {
         RuleFor(x => x.Page).Page();
-        RuleFor(x => x.PageSize).PageSize();
+        RuleFor(x => x.Size).PageSize();
         RuleFor(x => x.Search).Search();
-        RuleFor(x => x.SortBy)
-            .Must(value => string.IsNullOrWhiteSpace(value)
-                           || new[] { "name", "title" }.Contains(value, StringComparer.OrdinalIgnoreCase))
-            .WithMessage("El orden debe ser name o title.");
+        RuleFor(x => x.Sort)
+            .Must(values => values is null || values.All(value =>
+            {
+                var parts = value.Split(',', StringSplitOptions.TrimEntries);
+                return parts.Length is 1 or 2
+                       && new[] { "name", "title" }.Contains(parts[0], StringComparer.OrdinalIgnoreCase)
+                       && (parts.Length == 1 || new[] { "asc", "desc" }
+                           .Contains(parts[1], StringComparer.OrdinalIgnoreCase));
+            }))
+            .WithMessage("El orden debe usar name o title y la dirección asc o desc.");
     }
 }

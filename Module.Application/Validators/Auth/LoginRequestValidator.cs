@@ -7,7 +7,7 @@ public class LoginRequestValidator : AbstractValidator<LoginRequest>
 {
     public LoginRequestValidator()
     {
-        RuleFor(x => x.Email).Email();
+        RuleFor(x => x.Username).NotEmpty().MaximumLength(255);
         RuleFor(x => x.Password).NotEmpty();
     }
 }

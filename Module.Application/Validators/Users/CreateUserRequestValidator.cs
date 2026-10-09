@@ -12,6 +12,6 @@ public class CreateUserRequestValidator : AbstractValidator<CreateUserRequest>
         RuleFor(x => x.Password).StrongPassword();
         RuleFor(x => x.Name).NotEmpty().MaximumLength(100);
         RuleFor(x => x.Surname).NotEmpty().MaximumLength(100);
-        RuleFor(x => x.RoleId).GreaterThan(0);
+        RuleFor(x => x.Role.Id).GreaterThan(0);
     }
 }

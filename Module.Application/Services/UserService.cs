@@ -11,18 +11,21 @@ namespace Module.Application.Services;
 
 public interface IUserService
 {
-    Task<PagedResult<UserSummary>> ListAsync(UserListQuery query, CancellationToken ct);
+    Task<PagedResult<UserDetail>> ListAsync(UserListQuery query, CancellationToken ct);
     Task<UserDetail> GetAsync(long id, CancellationToken ct);
     Task<UserDetail> CreateAsync(CreateUserRequest request, CancellationToken ct);
     Task<UserDetail> UpdateAsync(long id, UpdateUserRequest request, long currentUserId, CancellationToken ct);
     Task DeleteAsync(long id, long currentUserId, CancellationToken ct);
+    Task RestoreAsync(long id, CancellationToken ct);
 }
 
 public class UserService(IApplicationDbContext db, IPasswordHasher hasher, IPermissionService permissions) : IUserService
 {
-    public async Task<PagedResult<UserSummary>> ListAsync(UserListQuery q, CancellationToken ct)
+    public async Task<PagedResult<UserDetail>> ListAsync(UserListQuery q, CancellationToken ct)
     {
         var query = db.Users.AsNoTracking();
+        if (q.Deleted)
+            query = query.IgnoreQueryFilters().Where(u => u.DeletedAt != null);
 
         if (!string.IsNullOrWhiteSpace(q.Search))
         {
@@ -30,13 +33,15 @@ public class UserService(IApplicationDbContext db, IPasswordHasher hasher, IPerm
             query = query.Where(u => u.Username.ToLower().Contains(s) || u.Email.ToLower().Contains(s)
                                   || u.Name.ToLower().Contains(s) || u.Surname.ToLower().Contains(s));
         }
-        if (q.RoleId is { } roleId) query = query.Where(u => u.RoleId == roleId);
+        if (q.Role is { } roleId) query = query.Where(u => u.RoleId == roleId);
         if (q.Blocked is { } blocked) query = query.Where(u => u.Blocked == blocked);
 
-        return await Sort(query, q.SortBy, q.Desc)
+        var (sortBy, desc) = GetSort(q.Sort, "createdAt");
+        var page = await Sort(query, sortBy, desc)
             .ThenBy(u => u.Id)
-            .Select(u => new UserSummary(u.Id, u.Username, u.Email, u.Name, u.Surname, u.Role.Name, u.Blocked))
-            .ToPagedAsync(q.Page, q.PageSize, ct);
+            .Include(u => u.Role).ThenInclude(r => r.Permissions)
+            .ToPagedAsync(q.Page, q.Size, ct);
+        return new PagedResult<UserDetail>(page.Data.Select(user => user.ToDetail()).ToList(), page.Pagination);
     }
 
     public async Task<UserDetail> GetAsync(long id, CancellationToken ct)
@@ -53,7 +58,7 @@ public class UserService(IApplicationDbContext db, IPasswordHasher hasher, IPerm
         var email = request.Email.Trim().ToLowerInvariant();
 
         await EnsureUniqueAsync(0, username, email, ct);
-        var role = await GetActiveRoleAsync(request.RoleId, ct);
+        var role = await GetActiveRoleAsync(request.Role.Id, ct);
 
         var user = new User
         {
@@ -77,20 +82,20 @@ public class UserService(IApplicationDbContext db, IPasswordHasher hasher, IPerm
                        .FirstOrDefaultAsync(u => u.Id == id, ct)
                    ?? throw AppException.NotFound("Usuario no encontrado.");
 
-        if (id == currentUserId && (request.Blocked || request.RoleId != user.RoleId))
+        if (id == currentUserId && (request.Blocked || request.Role.Id != user.RoleId))
             throw AppException.Forbidden("No puedes bloquearte ni cambiar tu propio rol.");
 
         var username = request.Username.Trim().ToLowerInvariant();
         var email = request.Email.Trim().ToLowerInvariant();
 
         if (user.Role.Name == RoleNames.SuperAdmin
-            && (request.Blocked || request.RoleId != user.RoleId || username != user.Username || email != user.Email))
+            && (request.Blocked || request.Role.Id != user.RoleId || username != user.Username || email != user.Email))
             throw AppException.Conflict(
                 "El super admin está protegido: no se puede bloquear ni cambiar su rol, usuario o email.");
 
         await EnsureUniqueAsync(id, username, email, ct);
 
-        var role = request.RoleId == user.RoleId ? user.Role : await GetActiveRoleAsync(request.RoleId, ct);
+        var role = request.Role.Id == user.RoleId ? user.Role : await GetActiveRoleAsync(request.Role.Id, ct);
         var justBlocked = request.Blocked && !user.Blocked;
 
         user.Username = username;
@@ -125,6 +130,21 @@ public class UserService(IApplicationDbContext db, IPasswordHasher hasher, IPerm
         permissions.InvalidateAll();
     }
 
+    public async Task RestoreAsync(long id, CancellationToken ct)
+    {
+        var user = await db.Users.IgnoreQueryFilters()
+                       .Include(u => u.Role)
+                       .FirstOrDefaultAsync(u => u.Id == id, ct)
+                   ?? throw AppException.NotFound("Usuario no encontrado.");
+        if (user.DeletedAt is null)
+            return;
+
+        await EnsureUniqueAsync(id, user.Username, user.Email, ct);
+        user.DeletedAt = null;
+        await db.SaveChangesAsync(ct);
+        permissions.InvalidateAll();
+    }
+
     private static IOrderedQueryable<User> Sort(IQueryable<User> q, string? by, bool desc) =>
         by?.ToLowerInvariant() switch
         {
@@ -133,6 +153,16 @@ public class UserService(IApplicationDbContext db, IPasswordHasher hasher, IPerm
             "name" => desc ? q.OrderByDescending(u => u.Name) : q.OrderBy(u => u.Name),
             _ => desc ? q.OrderByDescending(u => u.CreatedAt) : q.OrderBy(u => u.CreatedAt),
         };
+
+    private static (string? By, bool Desc) GetSort(string[]? sort, string defaultSort)
+    {
+        var value = sort?.FirstOrDefault();
+        if (string.IsNullOrWhiteSpace(value))
+            return (defaultSort, false);
+
+        var parts = value.Split(',', StringSplitOptions.TrimEntries);
+        return (parts[0], parts.Length == 2 && parts[1].Equals("desc", StringComparison.OrdinalIgnoreCase));
+    }
 
     private async Task EnsureUniqueAsync(long excludeId, string username, string email, CancellationToken ct)
     {

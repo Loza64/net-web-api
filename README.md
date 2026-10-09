@@ -250,24 +250,26 @@ Al iniciar, el seeder garantiza que exista el rol `SUPER_ADMIN` y que tenga todo
 
 ## API
 
-Todos los listados admiten paginación (`page`, `pageSize`; predeterminados 1 y 30, máximo 100), búsqueda (`search`) y orden (`sortBy`, `desc`) cuando aplique. Los resultados paginados tienen la forma `data` y `pagination`.
+Los listados usan paginación indexada desde cero (`page`, predeterminado 0; `size`, predeterminado 30, máximo 100), búsqueda (`search`) y orden (`sort`, por ejemplo `sort=name,desc`) cuando aplique. Los resultados paginados tienen la forma `data` y `pagination`.
 
 | Método | Ruta | Acceso |
 |---|---|---|
 | `POST` | `/api/auth/login` | Público; limitado por tasa |
-| `POST` | `/api/auth/register` | Público; limitado por tasa |
+| `POST` | `/api/auth/signup` | Público; limitado por tasa |
 | `POST` | `/api/auth/refresh` | Público; limitado por tasa |
 | `POST` | `/api/auth/logout` | Público; limitado por tasa |
 | `GET`, `PUT` | `/api/auth/profile` | JWT válido |
-| `PUT` | `/api/auth/profile/password` | JWT válido |
+| `PATCH` | `/api/auth/password` | JWT válido |
 | `GET` | `/api/users`, `/api/users/{id}` | Permiso `users.read` |
 | `POST`, `PUT`, `DELETE` | `/api/users`, `/api/users/{id}` | Permiso `users.manage` |
+| `PATCH` | `/api/users/{id}/restore` | Permiso `users.manage` |
 | `GET` | `/api/roles`, `/api/roles/{id}` | Permiso `roles.read` |
 | `POST`, `PUT`, `DELETE` | `/api/roles`, `/api/roles/{id}` | Permiso `roles.manage` |
+| `PATCH` | `/api/roles/{id}/restore` | Permiso `roles.manage` |
 | `PUT` | `/api/roles/{id}/permissions` | Permiso `roles.manage` |
-| `GET` | `/api/permissions` | Permiso `permissions.read` |
+| `GET`, `PUT` | `/api/permissions`, `/api/permissions/{id}` | Permiso `permissions.read` para lectura; `roles.manage` para edición |
 
-Los filtros disponibles incluyen `roleId` y `blocked` para usuarios, y `active` para roles. En desarrollo, OpenAPI está disponible en `/openapi/v1.json`. El archivo `Module.Api/Module.Api.http` contiene solicitudes de ejemplo para probar los endpoints.
+Los filtros disponibles incluyen `role` (ID de rol), `blocked` y `deleted` para usuarios, y `active` y `deleted` para roles. Para crear o actualizar un usuario, el rol se envía como `{ "role": { "id": 2 } }`; las listas de permisos en roles usan objetos `{ "id": ... }`. El inicio de sesión acepta un nombre de usuario o un email en el campo `username`. En desarrollo, OpenAPI está disponible en `/openapi/v1.json`. El archivo `Module.Api/Module.Api.http` contiene solicitudes de ejemplo para probar los endpoints.
 
 ## Migraciones y datos existentes
 
