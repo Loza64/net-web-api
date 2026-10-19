@@ -148,7 +148,7 @@ En lugar de guardar credenciales en `.env` o en archivos versionados, puedes usa
 ```powershell
 dotnet user-secrets init --project .\Module.Api
 
-dotnet user-secrets set "ConnectionStrings:Default" "User Id=USUARIO;Password=CONTRASENA;Data Source=localhost:1521/FREEPDB1" --project .\Module.Api
+dotnet user-secrets set "ConnectionStrings:Default" 'User Id=\"RBAC-NET\";Password=\"PackCode*505\";Data Source=localhost:1521/ORCLCDB' --project .\Module.Api
 dotnet user-secrets set "Jwt:Issuer" "rbac-api" --project .\Module.Api
 dotnet user-secrets set "Jwt:Audience" "rbac-clients" --project .\Module.Api
 dotnet user-secrets set "Jwt:Key" "REEMPLAZA_POR_UNA_CLAVE_ALEATORIA_DE_AL_MENOS_32_CARACTERES" --project .\Module.Api
