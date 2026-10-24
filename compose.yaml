@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: net-web-rbac
+    container_name: net-web
     restart: unless-stopped
     env_file:
       - .env
