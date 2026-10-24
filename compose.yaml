@@ -1,0 +1,20 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: net-web-rbac
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
+    ports:
+      - "${API_PORT:-3500}:3500"
+    networks:
+      - oracle_network
+
+networks:
+  oracle_network:
+    external: true
+    name: oracle_network

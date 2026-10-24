@@ -107,8 +107,9 @@ Las versiones indicadas son las declaradas en los archivos `.csproj` (`*` repres
 |---|---:|---|---|
 | `DotNetEnv` | `3.*` | `Module.Api` | Lee `.env` sin reemplazar variables existentes y busca el archivo en directorios superiores. |
 | `Microsoft.AspNetCore.Authentication.JwtBearer` | `10.*` | `Module.Api` | Valida JWT bearer en las solicitudes HTTP. |
-| `Microsoft.AspNetCore.OpenApi` | `10.*` | `Module.Api` | Expone el documento OpenAPI en desarrollo. |
+| `Microsoft.AspNetCore.OpenApi` | `10.*` | `Module.Api` | Genera el documento OpenAPI en desarrollo. |
 | `Microsoft.EntityFrameworkCore.Design` | `10.*` | `Module.Api` | Herramientas de diseño y migraciones de EF Core; dependencia privada de desarrollo (`PrivateAssets=all`). |
+| `Scalar.AspNetCore` | `2.18.3` | `Module.Api` | Interfaz interactiva de la documentación OpenAPI en desarrollo (`/swagger`). |
 | `FluentValidation` | `11.*` | `Module.Application` | Define reglas de validación para los contratos de entrada. |
 | `FluentValidation.DependencyInjectionExtensions` | `11.*` | `Module.Application` | Registra validadores en la inyección de dependencias. |
 | `Microsoft.EntityFrameworkCore` | `10.*` | `Module.Application` | Tipos y operaciones de consulta usados por los casos de uso. |
@@ -158,9 +159,18 @@ dotnet user-secrets set "SuperAdmin:Password" "REEMPLAZA_POR_UNA_CONTRASENA_SEGU
 dotnet user-secrets set "SuperAdmin:Username" "superadmin" --project .\Module.Api
 dotnet user-secrets set "SuperAdmin:Name" "Super" --project .\Module.Api
 dotnet user-secrets set "SuperAdmin:Surname" "Admin" --project .\Module.Api
+
+dotnet user-secrets set "Cors:AllowedOrigins:0" "https://app.example.com" --project .\Module.Api
+dotnet user-secrets set "Cors:AllowedOrigins:1" "https://admin.example.com" --project .\Module.Api
 ```
 
-Reemplaza los valores de ejemplo por los de tu entorno. User Secrets se almacena fuera del repositorio y se carga en el entorno `Development`; las variables de entorno del proceso tienen prioridad si una clave está definida en ambos lugares. No publiques credenciales ni claves reales en el README, `.env` u otros archivos versionados.
+Reemplaza los valores de ejemplo por los de tu entorno. El puerto HTTP predeterminado es `3500`; **no necesitas configurar ningún secreto para usar ese puerto**. Solo si quieres cambiarlo en desarrollo, establece la URL de escucha, reemplazando `3600` por el puerto deseado:
+
+```powershell
+dotnet user-secrets set "Kestrel:Endpoints:Http:Url" "http://0.0.0.0:3600" --project .\Module.Api
+```
+
+Para CORS, agrega **un comando por cada dominio/origen**, usando índices consecutivos (`:0`, `:1`, `:2`, etc.); por ejemplo, el bloque configura dos dominios. Incluye `https://` (o `http://` en desarrollo local) y el puerto si lo hay. User Secrets se almacena fuera del repositorio y se carga en el entorno `Development`; las variables de entorno del proceso tienen prioridad si una clave está definida en ambos lugares. No publiques credenciales ni claves reales en el README, `.env` u otros archivos versionados.
 
 ### Establecer variables de entorno
 
@@ -174,7 +184,7 @@ notepad .env
 Configura, como mínimo, `CONNECTIONSTRINGS__DEFAULT`, `JWT__ISSUER`, `JWT__AUDIENCE`, `JWT__KEY`, `SUPERADMIN__EMAIL` y `SUPERADMIN__PASSWORD`. El formato del archivo es `NOMBRE=valor`; para una connection string o contraseña que incluya espacios o `;`, encierra el valor entre comillas simples.
 
 ```dotenv
-CONNECTIONSTRINGS__DEFAULT='User Id=USUARIO;Password=CONTRASENA;Data Source=localhost:1521/FREEPDB1'
+CONNECTIONSTRINGS__DEFAULT='User Id=USUARIO;Password=CONTRASENA;Data Source=localhost:1521/ORCLCDB'
 JWT__ISSUER=Module.Api
 JWT__AUDIENCE=Module.Api
 JWT__KEY=REEMPLAZA_POR_UN_SECRETO_ALEATORIO_DE_AL_MENOS_32_CARACTERES
@@ -188,7 +198,7 @@ SUPERADMIN__SURNAME=Admin
 También puedes establecerlas solo para la sesión actual de PowerShell. Los procesos iniciados desde esa ventana, incluido `dotnet run`, heredarán esos valores:
 
 ```powershell
-$env:CONNECTIONSTRINGS__DEFAULT = 'User Id=USUARIO;Password=CONTRASENA;Data Source=localhost:1521/FREEPDB1'
+$env:CONNECTIONSTRINGS__DEFAULT = 'User Id=USUARIO;Password=CONTRASENA;Data Source=localhost:1521/ORCLCDB'
 $env:JWT__ISSUER = 'Module.Api'
 $env:JWT__AUDIENCE = 'Module.Api'
 $env:JWT__KEY = 'REEMPLAZA_POR_UN_SECRETO_ALEATORIO_DE_AL_MENOS_32_CARACTERES'
@@ -198,6 +208,19 @@ dotnet run --project .\Module.Api
 ```
 
 Para persistir una variable para tu usuario de Windows, puedes usar `[Environment]::SetEnvironmentVariable('JWT__ISSUER', 'Module.Api', 'User')`; repite el comando para cada variable y abre una nueva terminal para que los cambios estén disponibles. Para despliegues, configura estas mismas variables en el mecanismo del hosting o gestor de secretos. No subas `.env` ni persistas secretos en equipos compartidos. Las variables del proceso tienen prioridad sobre los valores del archivo `.env`.
+
+### CORS y documentación interactiva
+
+En desarrollo, la interfaz interactiva está disponible en `/swagger` y el documento OpenAPI en `/openapi/v1.json`. Ambos endpoints solo se exponen en el entorno `Development`.
+
+Los orígenes permitidos se configuran mediante User Secrets en desarrollo local con la clave `Cors:AllowedOrigins`. Puedes autorizar **más de un dominio** añadiendo una entrada por índice:
+
+```powershell
+dotnet user-secrets set "Cors:AllowedOrigins:0" "https://app.example.com" --project .\Module.Api
+dotnet user-secrets set "Cors:AllowedOrigins:1" "https://admin.example.com" --project .\Module.Api
+```
+
+Para permitir un tercer dominio, agrega `Cors:AllowedOrigins:2` y continúa con índices consecutivos. Usa el origen exacto, incluyendo esquema y puerto cuando aplique. Para producción, configura la misma lista en el gestor de configuración/secretos del entorno desplegado. No se habilitan credenciales de navegador ni se permite cualquier origen.
 
 ## Inicializar la solución y ejecutar el backend
 
@@ -269,7 +292,41 @@ Los listados usan paginación indexada desde cero (`page`, predeterminado 0; `si
 | `PUT` | `/api/roles/{id}/permissions` | Permiso `roles.manage` |
 | `GET`, `PUT` | `/api/permissions`, `/api/permissions/{id}` | Permiso `permissions.read` para lectura; `roles.manage` para edición |
 
-Los filtros disponibles incluyen `role` (ID de rol), `blocked` y `deleted` para usuarios, y `active` y `deleted` para roles. Para crear o actualizar un usuario, el rol se envía como `{ "role": { "id": 2 } }`; las listas de permisos en roles usan objetos `{ "id": ... }`. El inicio de sesión acepta un nombre de usuario o un email en el campo `username`. En desarrollo, OpenAPI está disponible en `/openapi/v1.json`. El archivo `Module.Api/Module.Api.http` contiene solicitudes de ejemplo para probar los endpoints.
+Los filtros disponibles incluyen `role` (ID de rol), `blocked` y `deleted` para usuarios, y `active` y `deleted` para roles. Para crear o actualizar un usuario, el rol se envía como `{ "role": { "id": 2 } }`; las listas de permisos en roles usan objetos `{ "id": ... }`. El inicio de sesión acepta un nombre de usuario o un email en el campo `username`. En desarrollo, la documentación interactiva está en `/swagger` y el documento OpenAPI en `/openapi/v1.json`. El archivo `Module.Api/Module.Api.http` contiene solicitudes de ejemplo para probar los endpoints.
+
+## Docker
+
+La API usa un Dockerfile multi-stage: compila con el SDK oficial de .NET 10 y publica solo los artefactos necesarios en la imagen oficial de ASP.NET Core. El contenedor final corre como usuario no root y escucha en el puerto `3500`. Docker Compose construye e inicia la API; Oracle sigue siendo el servicio independiente definido en [su Compose](https://github.com/Loza64/docker-containers/blob/main/database/oracle/docker-compose.yaml).
+
+### Iniciar la API junto a Oracle
+
+Primero inicia el Compose de Oracle y asegúrate de que su contenedor esté conectado a la red Docker `oracle_network`. Luego, desde la raíz de este repositorio, crea el archivo local `.env` desde la plantilla y edita la cadena de conexión, los secretos y los orígenes CORS:
+
+```powershell
+Copy-Item .env.example .env
+notepad .env
+```
+
+La cadena de conexión de ejemplo usa el host `oracle` (nombre del servicio de Oracle en la red Docker), el puerto `1521` y la PDB `ORCLPDB1`:
+
+```dotenv
+CONNECTIONSTRINGS__DEFAULT='User Id=RBAC-NET;Password=TU_CONTRASENA_ORACLE;Data Source=oracle:1521/ORCLPDB1'
+```
+
+No uses `localhost` como host de Oracle desde el contenedor de la API: ahí `localhost` se refiere al propio contenedor de la API. La red `oracle_network` está declarada como externa, así que debe existir antes de iniciar Compose; este Compose no crea ni inicia la base de datos. Si el Compose de Oracle todavía no crea esa red con ese nombre, ajusta su configuración de red o usa el nombre real que Docker haya creado.
+
+```powershell
+docker compose up --build -d
+docker compose logs -f api
+```
+
+Por defecto la API escucha en el puerto `3500` dentro del contenedor y Compose lo publica como `3500` en el host. Con la configuración predeterminada, abre Swagger en **[http://localhost:3500/swagger](http://localhost:3500/swagger)**. **Cambiar el puerto es opcional**: si solo quieres cambiar el puerto del host, define `API_PORT` en `.env` (por ejemplo, `API_PORT=5000`) y Swagger estará en `http://localhost:5000/swagger`; el puerto interno continúa en `3500`. En ejecución local, el puerto predeterminado también es `3500`; solo si quieres cambiarlo, establece `Kestrel:Endpoints:Http:Url` en User Secrets como se mostró arriba. El perfil de inicio abre `http://localhost:3500/swagger`. El valor `ASPNETCORE_ENVIRONMENT=Development` de `.env.example` habilita Swagger localmente; antes de un despliegue de producción, configúralo como `Production`. En producción, suministra los secretos desde el gestor de secretos del entorno en lugar de versionar o copiar un `.env` con valores reales.
+
+Para detener la API sin eliminar la red externa ni el contenedor de Oracle:
+
+```powershell
+docker compose down
+```
 
 ## Migraciones y datos existentes
 
@@ -281,3 +338,19 @@ Las migraciones se generan en `Module.Infrastructure/Persistence/Migrations`. Si
 - Configura HTTPS, una instancia de Oracle administrada y políticas de copia de seguridad y acceso adecuadas.
 - Revisa las migraciones antes de aplicarlas; fuera de Development el inicio no migra automáticamente salvo que `DATABASE__MIGRATEONSTARTUP=true`.
 - La limitación actual de autenticación es por proceso y ventana fija, no sustituye una política de rate limiting distribuida cuando se ejecutan varias instancias.
+
+Configura las variables en el entorno de ejecución de la aplicación o en el gestor de secretos de la plataforma (por ejemplo, Azure App Service: **Configuración → Variables de entorno**; Docker/Kubernetes: configuración de entorno y Secrets del despliegue). Usa los nombres de .NET con `__` como separador y no guardes valores reales en el repositorio:
+
+```text
+ASPNETCORE_ENVIRONMENT=Production
+CONNECTIONSTRINGS__DEFAULT=<connection string de Oracle>
+JWT__ISSUER=<emisor del token>
+JWT__AUDIENCE=<audiencia del token>
+JWT__KEY=<clave aleatoria y secreta de al menos 32 caracteres>
+SUPERADMIN__EMAIL=<correo del super admin>
+SUPERADMIN__PASSWORD=<contraseña segura del super admin>
+CORS__ALLOWEDORIGINS__0=https://app.example.com
+CORS__ALLOWEDORIGINS__1=https://admin.example.com
+```
+
+Para CORS configura **una variable por dominio/origen** y usa índices consecutivos: `CORS__ALLOWEDORIGINS__0`, `CORS__ALLOWEDORIGINS__1`, `CORS__ALLOWEDORIGINS__2`, etc. Así puedes permitir varios dominios. Indica el origen exacto con esquema (`https://`) y puerto si aplica; no uses `*`. Después de guardar o cambiar las variables, reinicia la aplicación. La interfaz Swagger solo se expone en `Development`, por lo que no estará disponible en producción con la configuración actual.
