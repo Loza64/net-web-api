@@ -1,9 +1,9 @@
 services:
-  api:
+  app:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: net-web
+    container_name: net-web-api
     restart: unless-stopped
     env_file:
       - .env
