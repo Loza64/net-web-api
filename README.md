@@ -283,7 +283,7 @@ Al iniciar, el seeder garantiza que exista el rol `SUPER_ADMIN` y que tenga todo
 
 ## API
 
-Los listados usan paginación indexada desde cero (`page`, predeterminado 0; `size`, predeterminado 30, máximo 100), búsqueda (`search`) y orden (`sort`, por ejemplo `sort=name,desc`) cuando aplique. Los resultados paginados tienen la forma `data` y `pagination`.
+Los listados usan paginación indexada desde uno (`page`, predeterminado 1; `size`, predeterminado 30, máximo 1500), búsqueda (`search`) y orden (`sort`, por ejemplo `sort=name,desc`) cuando aplique. Los resultados paginados tienen la forma `data` y `pagination`.
 
 | Método | Ruta | Acceso |
 |---|---|---|

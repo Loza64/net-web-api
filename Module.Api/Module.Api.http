@@ -57,7 +57,7 @@ Content-Type: application/json
 }
 
 ### Listar usuarios (requiere permiso users.read)
-GET {{host}}/api/users?page=0&size=20
+GET {{host}}/api/users?page=1&size=20
 Authorization: Bearer {{token}}
 
 ### Refresh (repetirlo con el mismo token debe dar 401)
@@ -79,7 +79,7 @@ Content-Type: application/json
 ### ===== USERS =====
 
 ### Listar con filtros y orden
-GET {{host}}/api/users?page=0&size=10&search=super&blocked=false&sort=email,asc
+GET {{host}}/api/users?page=1&size=10&search=super&blocked=false&sort=email,asc
 Authorization: Bearer {{token}}
 
 ### Obtener uno
@@ -125,7 +125,7 @@ Authorization: ******
 ### ===== ROLES =====
 
 ### Listar
-GET {{host}}/api/roles?page=0&size=20&search=&active=true&sort=name,asc
+GET {{host}}/api/roles?page=1&size=20&search=&active=true&sort=name,asc
 Authorization: Bearer {{token}}
 
 ### Detalle (con permisos)
@@ -171,5 +171,5 @@ Content-Type: application/json
 { "title": "Consultar usuarios" }
 
 ### Listar catálogo
-GET {{host}}/api/permissions?page=0&size=30&search=users
+GET {{host}}/api/permissions?page=1&size=30&search=users
 Authorization: Bearer {{token}}
