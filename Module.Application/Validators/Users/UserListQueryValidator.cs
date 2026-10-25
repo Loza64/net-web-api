@@ -8,7 +8,7 @@ public class UserListQueryValidator : AbstractValidator<UserListQuery>
     public UserListQueryValidator()
     {
         RuleFor(x => x.Page).Page();
-        RuleFor(x => x.Size).PageSize();
+        RuleFor(x => x.PageSize).PageSize();
         RuleFor(x => x.Search).Search();
         RuleFor(x => x.Role).GreaterThan(0).When(x => x.Role.HasValue);
         RuleFor(x => x.Sort)

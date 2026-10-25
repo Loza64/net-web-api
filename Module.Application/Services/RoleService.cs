@@ -40,7 +40,7 @@ public class RoleService(IApplicationDbContext db, IPermissionService permission
             ? (desc ? query.OrderByDescending(r => r.Name) : query.OrderBy(r => r.Name))
             : (desc ? query.OrderByDescending(r => r.Id) : query.OrderBy(r => r.Id));
 
-        var page = await ordered.Include(r => r.Permissions).ToPagedAsync(q.Page, q.Size, ct);
+        var page = await ordered.Include(r => r.Permissions).ToPagedAsync(q.Page, q.PageSize, ct);
         return new PagedResult<RoleDetail>(page.Data.Select(r => r.ToDetail()).ToList(), page.Pagination);
     }
 

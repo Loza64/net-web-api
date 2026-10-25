@@ -32,7 +32,7 @@ public class PermissionCatalogService(IApplicationDbContext db) : IPermissionCat
 
         return await ordered
             .Select(p => new PermissionDto(p.Id, p.Name, p.Title))
-            .ToPagedAsync(q.Page, q.Size, ct);
+            .ToPagedAsync(q.Page, q.PageSize, ct);
     }
 
     public async Task<PermissionDto> UpdateAsync(long id, string title, CancellationToken ct)

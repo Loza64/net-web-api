@@ -40,7 +40,7 @@ public class UserService(IApplicationDbContext db, IPasswordHasher hasher, IPerm
         var page = await Sort(query, sortBy, desc)
             .ThenBy(u => u.Id)
             .Include(u => u.Role).ThenInclude(r => r.Permissions)
-            .ToPagedAsync(q.Page, q.Size, ct);
+            .ToPagedAsync(q.Page, q.PageSize, ct);
         return new PagedResult<UserDetail>(page.Data.Select(user => user.ToDetail()).ToList(), page.Pagination);
     }
 

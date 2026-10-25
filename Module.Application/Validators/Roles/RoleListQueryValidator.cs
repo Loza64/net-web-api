@@ -8,7 +8,7 @@ public class RoleListQueryValidator : AbstractValidator<RoleListQuery>
     public RoleListQueryValidator()
     {
         RuleFor(x => x.Page).Page();
-        RuleFor(x => x.Size).PageSize();
+        RuleFor(x => x.PageSize).PageSize();
         RuleFor(x => x.Search).Search();
         RuleFor(x => x.Sort)
             .Must(values => values is null || values.All(value =>
