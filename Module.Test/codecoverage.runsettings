@@ -1,0 +1,18 @@
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="Code Coverage">
+        <Configuration>
+          <Format>Cobertura</Format>
+          <EnableStaticManagedInstrumentation>False</EnableStaticManagedInstrumentation>
+          <EnableDynamicManagedInstrumentation>True</EnableDynamicManagedInstrumentation>
+          <ModulePaths>
+            <Include>
+              <ModulePath>.*Module\.(Api|Application|Domain|Infrastructure)\.dll$</ModulePath>
+            </Include>
+          </ModulePaths>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>

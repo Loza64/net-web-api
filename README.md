@@ -21,8 +21,52 @@ Module.Api
 | `Module.Application` | Casos de uso y servicios de autenticación, perfiles, usuarios, roles y catálogo de permisos; contratos/DTOs; validadores; mapeos; paginación; e interfaces que abstraen persistencia, tokens, contraseñas y caché de permisos. |
 | `Module.Infrastructure` | Persistencia con Entity Framework Core y Oracle, configuración del modelo, implementaciones de hashing/tokens/permisos y siembra inicial de datos. |
 | `Module.Api` | Aplicación ASP.NET Core: controladores, autenticación JWT, autorización por permisos, filtro de validación, manejo de errores, OpenAPI y configuración de inicio. |
+| `Module.Test` | Pruebas unitarias e integración HTTP para validaciones, tokens, contraseñas y flujos principales de autenticación y administración. |
 
 Los controladores delegan en los servicios de `Application`. Estos usan interfaces del módulo, no dependen directamente de Oracle. `Infrastructure` proporciona las implementaciones y `Api` registra ambos módulos al iniciar la aplicación.
+
+## Pruebas
+
+Las pruebas de integración usan una base SQLite en memoria, por lo que no requieren una instancia de Oracle:
+
+Ejecuta todas las pruebas:
+
+```powershell
+dotnet test Module.Test\Module.Test.csproj
+```
+
+Ejecuta las pruebas definidas en un archivo. En .NET, el filtro se aplica por nombre de clase de pruebas, no por ruta del archivo:
+
+```powershell
+dotnet test Module.Test\Module.Test.csproj --filter "FullyQualifiedName~ValidationTests"
+```
+
+Ejecuta una prueba (método) específica usando su nombre:
+
+```powershell
+dotnet test Module.Test\Module.Test.csproj --filter "FullyQualifiedName~RegisterRequestValidator_accepts_valid_registration"
+```
+
+### Cobertura de código
+
+Para ver la cobertura en el navegador, el recolector de Microsoft genera un archivo Cobertura y ReportGenerator crea el informe HTML.
+
+Desde la raíz del repositorio, restaura ReportGenerator una sola vez:
+
+```powershell
+dotnet tool restore
+```
+
+Después, ejecuta las pruebas con cobertura, genera el informe y ábrelo:
+
+```powershell
+Remove-Item -Recurse -Force .\TestResults\Coverage -ErrorAction SilentlyContinue
+dotnet test .\Module.Test\Module.Test.csproj --collect:"Code Coverage" --settings .\Module.Test\codecoverage.runsettings --results-directory .\TestResults\Coverage
+dotnet tool run reportgenerator -- "-reports:.\TestResults\Coverage\**\*.cobertura.xml" "-targetdir:.\TestResults\Coverage\report" "-reporttypes:Html" "-assemblyfilters:+Module.Api;+Module.Application;+Module.Domain;+Module.Infrastructure" "-classfilters:-Program" "-filefilters:-**/obj/**"
+Start-Process .\TestResults\Coverage\report\index.html
+```
+
+La primera línea elimina resultados de cobertura anteriores para que el informe no mezcle ejecuciones. `-filefilters:-**/obj/**` excluye del informe los archivos generados durante la compilación, que pueden desaparecer antes de que ReportGenerator los lea y provocar avisos en la terminal. El informe HTML muestra el resumen y las líneas cubiertas o pendientes por módulo, clase y archivo. `TestResults` está excluido de Git. En equipos donde Windows Application Control bloquee ReportGenerator, la UI no podrá generarse hasta que TI autorice la herramienta; el archivo Cobertura sí se puede conservar y usar después.
 
 ### Crear una biblioteca y enlazar proyectos
 
