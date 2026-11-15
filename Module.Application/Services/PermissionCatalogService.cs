@@ -13,7 +13,7 @@ public interface IPermissionCatalogService
     Task<PermissionDto> UpdateAsync(long id, string title, CancellationToken ct);
 }
 
-public class PermissionCatalogService(IApplicationDbContext db) : IPermissionCatalogService
+public class PermissionCatalogService(IApplicationDbContext db, IUnitOfWork unitOfWork) : IPermissionCatalogService
 {
     public async Task<PagedResult<PermissionDto>> ListAsync(PermissionListQuery q, CancellationToken ct)
     {
@@ -40,7 +40,7 @@ public class PermissionCatalogService(IApplicationDbContext db) : IPermissionCat
         var permission = await db.Permissions.FirstOrDefaultAsync(p => p.Id == id, ct)
                          ?? throw AppException.NotFound("Permiso no encontrado.");
         permission.Title = title.Trim();
-        await db.SaveChangesAsync(ct);
+        await unitOfWork.SaveChangesAsync(ct);
         return permission.ToDto();
     }
 

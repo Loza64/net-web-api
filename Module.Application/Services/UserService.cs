@@ -19,7 +19,7 @@ public interface IUserService
     Task RestoreAsync(long id, CancellationToken ct);
 }
 
-public class UserService(IApplicationDbContext db, IPasswordHasher hasher, IPermissionService permissions) : IUserService
+public class UserService(IApplicationDbContext db, IUnitOfWork unitOfWork, IPasswordHasher hasher, IPermissionService permissions) : IUserService
 {
     public async Task<PagedResult<UserDetail>> ListAsync(UserListQuery q, CancellationToken ct)
     {
@@ -70,7 +70,7 @@ public class UserService(IApplicationDbContext db, IPasswordHasher hasher, IPerm
             RoleId = role.Id
         };
         db.Users.Add(user);
-        await db.SaveChangesAsync(ct);
+        await unitOfWork.SaveChangesAsync(ct);
 
         user.Role = role;
         return user.ToDetail();
@@ -105,7 +105,7 @@ public class UserService(IApplicationDbContext db, IPasswordHasher hasher, IPerm
         user.Blocked = request.Blocked;
         user.RoleId = role.Id;
         user.Role = role;
-        await db.SaveChangesAsync(ct);
+        await unitOfWork.SaveChangesAsync(ct);
 
         if (justBlocked) await RevokeTokensAsync(id, ct);
         permissions.InvalidateAll();
@@ -124,7 +124,7 @@ public class UserService(IApplicationDbContext db, IPasswordHasher hasher, IPerm
             throw AppException.Conflict("El super admin está protegido y no se puede eliminar.");
 
         user.DeletedAt = DateTime.UtcNow;
-        await db.SaveChangesAsync(ct);
+        await unitOfWork.SaveChangesAsync(ct);
 
         await RevokeTokensAsync(id, ct);
         permissions.InvalidateAll();
@@ -141,7 +141,7 @@ public class UserService(IApplicationDbContext db, IPasswordHasher hasher, IPerm
 
         await EnsureUniqueAsync(id, user.Username, user.Email, ct);
         user.DeletedAt = null;
-        await db.SaveChangesAsync(ct);
+        await unitOfWork.SaveChangesAsync(ct);
         permissions.InvalidateAll();
     }
 

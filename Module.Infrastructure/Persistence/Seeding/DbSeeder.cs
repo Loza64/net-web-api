@@ -12,14 +12,16 @@ public static class DbSeeder
         using var scope = services.CreateScope();
         var sp = scope.ServiceProvider;
 
-        var db = sp.GetRequiredService<AppDbContext>();
+        var dbContext = sp.GetRequiredService<AppDbContext>();
+        var db = sp.GetRequiredService<IApplicationDbContext>();
+        var unitOfWork = sp.GetRequiredService<IUnitOfWork>();
         var hasher = sp.GetRequiredService<IPasswordHasher>();
         var superAdmin = sp.GetRequiredService<IOptions<SuperAdminSettings>>().Value;
 
-        if (migrate) await db.Database.MigrateAsync(ct);
+        if (migrate) await dbContext.Database.MigrateAsync(ct);
 
-        await PermissionSeeder.SeedAsync(db, ct);
-        await SuperAdminSeeder.SeedAsync(db, hasher, superAdmin, ct);
-        await RoleSeeder.SeedAsync(db, ct);
+        await PermissionSeeder.SeedAsync(db, unitOfWork, ct);
+        await SuperAdminSeeder.SeedAsync(db, unitOfWork, hasher, superAdmin, ct);
+        await RoleSeeder.SeedAsync(db, unitOfWork, ct);
     }
 }

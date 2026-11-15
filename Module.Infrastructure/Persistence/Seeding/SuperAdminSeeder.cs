@@ -8,13 +8,15 @@ namespace Module.Infrastructure.Persistence.Seeding;
 internal static class SuperAdminSeeder
 {
     public static async Task SeedAsync(
-        AppDbContext db, IPasswordHasher hasher, SuperAdminSettings settings, CancellationToken ct)
+        IApplicationDbContext db, IUnitOfWork unitOfWork, IPasswordHasher hasher,
+        SuperAdminSettings settings, CancellationToken ct)
     {
-        var role = await EnsureRoleAsync(db, ct);
-        await EnsureUserAsync(db, hasher, settings, role, ct);
+        var role = await EnsureRoleAsync(db, unitOfWork, ct);
+        await EnsureUserAsync(db, unitOfWork, hasher, settings, role, ct);
     }
 
-    private static async Task<Role> EnsureRoleAsync(AppDbContext db, CancellationToken ct)
+    private static async Task<Role> EnsureRoleAsync(
+        IApplicationDbContext db, IUnitOfWork unitOfWork, CancellationToken ct)
     {
         var role = await db.Roles.Include(r => r.Permissions)
             .FirstOrDefaultAsync(r => r.Name == RoleNames.SuperAdmin, ct);
@@ -31,12 +33,13 @@ internal static class SuperAdminSeeder
         foreach (var permission in all.Where(p => !granted.Contains(p.Id)))
             role.Permissions.Add(permission);
 
-        await db.SaveChangesAsync(ct);
+        await unitOfWork.SaveChangesAsync(ct);
         return role;
     }
 
     private static async Task EnsureUserAsync(
-        AppDbContext db, IPasswordHasher hasher, SuperAdminSettings settings, Role role, CancellationToken ct)
+        IApplicationDbContext db, IUnitOfWork unitOfWork, IPasswordHasher hasher,
+        SuperAdminSettings settings, Role role, CancellationToken ct)
     {
         var email = settings.Email.Trim().ToLowerInvariant();
         var username = settings.Username.Trim().ToLowerInvariant();
@@ -59,7 +62,7 @@ internal static class SuperAdminSeeder
                 Surname = settings.Surname.Trim(),
                 RoleId = role.Id
             });
-            await db.SaveChangesAsync(ct);
+            await unitOfWork.SaveChangesAsync(ct);
             return;
         }
 
@@ -68,7 +71,7 @@ internal static class SuperAdminSeeder
         user.RoleId = role.Id;
         user.Blocked = false;
         if (passwordChanged) user.Password = hasher.Hash(settings.Password);
-        await db.SaveChangesAsync(ct);
+        await unitOfWork.SaveChangesAsync(ct);
 
         if (passwordChanged)
             await db.RefreshTokens

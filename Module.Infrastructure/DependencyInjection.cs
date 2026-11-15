@@ -18,6 +18,7 @@ public static class DependencyInjection
                 oracle => oracle.UseOracleSQLCompatibility(OracleSQLCompatibility.DatabaseVersion19))
             .UseUpperSnakeCaseNamingConvention());
         services.AddScoped<IApplicationDbContext>(sp => sp.GetRequiredService<AppDbContext>());
+        services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<AppDbContext>());
 
         services.AddOptions<JwtSettings>()
             .Bind(config.GetSection(JwtSettings.SectionName))

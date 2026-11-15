@@ -23,11 +23,11 @@ Module.Api
 | `Module.Api` | Aplicación ASP.NET Core: controladores, autenticación JWT, autorización por permisos, filtro de validación, manejo de errores, OpenAPI y configuración de inicio. |
 | `Module.Test` | Pruebas unitarias e integración HTTP para validaciones, tokens, contraseñas y flujos principales de autenticación y administración. |
 
-Los controladores delegan en los servicios de `Application`. Estos usan interfaces del módulo, no dependen directamente de Oracle. `Infrastructure` proporciona las implementaciones y `Api` registra ambos módulos al iniciar la aplicación.
+Los controladores delegan en los servicios de `Application`. Estos usan interfaces del módulo, no dependen directamente de Oracle. `IApplicationDbContext` expone el acceso a entidades y `IUnitOfWork` concentra los commits de cambios rastreados, tanto en los casos de uso como en los seeders; `AppDbContext` implementa ambas interfaces y se registra con el mismo ciclo de vida scoped para que cada operación comparta una única unidad de trabajo. `Infrastructure` proporciona las implementaciones y `Api` registra ambos módulos al iniciar la aplicación.
 
 ## Pruebas
 
-Las pruebas de integración usan una base SQLite en memoria, por lo que no requieren una instancia de Oracle:
+Las pruebas están separadas por alcance: `Unit` contiene pruebas aisladas de validadores, hashing y tokens; `Integration` verifica persistencia con SQLite y flujos HTTP completos mediante `WebApplicationFactory`. La suite de integración no requiere una instancia de Oracle. Las pruebas tienen traits xUnit para distinguir casos positivos, negativos y de integración.
 
 Ejecuta todas las pruebas:
 
@@ -35,10 +35,17 @@ Ejecuta todas las pruebas:
 dotnet test Module.Test\Module.Test.csproj
 ```
 
-Ejecuta las pruebas definidas en un archivo. En .NET, el filtro se aplica por nombre de clase de pruebas, no por ruta del archivo:
+Ejecuta solo las pruebas unitarias o de integración:
 
 ```powershell
-dotnet test Module.Test\Module.Test.csproj --filter "FullyQualifiedName~ValidationTests"
+dotnet test Module.Test\Module.Test.csproj --filter "FullyQualifiedName~Module.Test.Unit"
+dotnet test Module.Test\Module.Test.csproj --filter "Category=integration"
+```
+
+Ejecuta las pruebas definidas en una clase. En .NET, el filtro se aplica por nombre de clase de pruebas, no por ruta del archivo:
+
+```powershell
+dotnet test Module.Test\Module.Test.csproj --filter "FullyQualifiedName~AuthenticationRequestValidatorTests"
 ```
 
 Ejecuta una prueba (método) específica usando su nombre:

@@ -20,7 +20,7 @@ public interface IRoleService
     Task<RoleDetail> SetPermissionsAsync(long id, SetRolePermissionsRequest request, CancellationToken ct);
 }
 
-public class RoleService(IApplicationDbContext db, IPermissionService permissions) : IRoleService
+public class RoleService(IApplicationDbContext db, IUnitOfWork unitOfWork, IPermissionService permissions) : IRoleService
 {
     public async Task<PagedResult<RoleDetail>> ListAsync(RoleListQuery q, CancellationToken ct)
     {
@@ -62,7 +62,7 @@ public class RoleService(IApplicationDbContext db, IPermissionService permission
         var role = new Role { Name = name, Active = request.Active };
         await SyncPermissionsAsync(role, request.Permissions ?? [], ct);
         db.Roles.Add(role);
-        await db.SaveChangesAsync(ct);
+        await unitOfWork.SaveChangesAsync(ct);
         return role.ToDetail();
     }
 
@@ -83,7 +83,7 @@ public class RoleService(IApplicationDbContext db, IPermissionService permission
         role.Active = request.Active;
         if (request.Permissions is not null)
             await SyncPermissionsAsync(role, request.Permissions, ct);
-        await db.SaveChangesAsync(ct);
+        await unitOfWork.SaveChangesAsync(ct);
 
         permissions.InvalidateAll();
         return role.ToDetail();
@@ -101,7 +101,7 @@ public class RoleService(IApplicationDbContext db, IPermissionService permission
             throw AppException.Conflict("No se puede eliminar un rol que tiene usuarios asignados.");
 
         role.DeletedAt = DateTime.UtcNow;
-        await db.SaveChangesAsync(ct);
+        await unitOfWork.SaveChangesAsync(ct);
         permissions.InvalidateAll();
     }
 
@@ -115,7 +115,7 @@ public class RoleService(IApplicationDbContext db, IPermissionService permission
             throw AppException.Conflict("Ya existe un rol activo con ese nombre.");
 
         role.DeletedAt = null;
-        await db.SaveChangesAsync(ct);
+        await unitOfWork.SaveChangesAsync(ct);
         permissions.InvalidateAll();
     }
 
@@ -127,7 +127,7 @@ public class RoleService(IApplicationDbContext db, IPermissionService permission
 
         await SyncPermissionsAsync(role, request.PermissionIds.Select(id => new IdRequest(id)).ToList(), ct);
 
-        await db.SaveChangesAsync(ct);
+        await unitOfWork.SaveChangesAsync(ct);
         permissions.InvalidateAll();
         return role.ToDetail();
     }

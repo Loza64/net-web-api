@@ -16,7 +16,7 @@ public interface IProfileService
     Task ChangePasswordAsync(long userId, ChangePasswordRequest request, CancellationToken ct);
 }
 
-public class ProfileService(IApplicationDbContext db, IPasswordHasher hasher) : IProfileService
+public class ProfileService(IApplicationDbContext db, IUnitOfWork unitOfWork, IPasswordHasher hasher) : IProfileService
 {
     public async Task<ProfileResponse> GetAsync(long userId, CancellationToken ct) =>
         (await LoadAsync(userId, ct)).ToProfileResponse();
@@ -40,7 +40,7 @@ public class ProfileService(IApplicationDbContext db, IPasswordHasher hasher) : 
         user.Email = email;
         user.Name = request.Name.Trim();
         user.Surname = request.Surname.Trim();
-        await db.SaveChangesAsync(ct);
+        await unitOfWork.SaveChangesAsync(ct);
 
         return user.ToProfileResponse();
     }
@@ -59,7 +59,7 @@ public class ProfileService(IApplicationDbContext db, IPasswordHasher hasher) : 
             throw AppException.BadRequest("La confirmación de contraseña no coincide.");
 
         user.Password = hasher.Hash(request.NewPassword);
-        await db.SaveChangesAsync(ct);
+        await unitOfWork.SaveChangesAsync(ct);
 
         await db.RefreshTokens
             .Where(t => t.UserId == userId && !t.Revoked)

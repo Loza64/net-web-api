@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Module.Application.Abstractions;
 using Module.Domain.Constants;
 using Module.Domain.Entities;
 
@@ -6,7 +7,7 @@ namespace Module.Infrastructure.Persistence.Seeding;
 
 internal static class PermissionSeeder
 {
-    public static async Task SeedAsync(AppDbContext db, CancellationToken ct)
+    public static async Task SeedAsync(IApplicationDbContext db, IUnitOfWork unitOfWork, CancellationToken ct)
     {
         var existing = await db.Permissions.ToListAsync(ct);
 
@@ -19,6 +20,6 @@ internal static class PermissionSeeder
                 permission.Title = title;
         }
 
-        await db.SaveChangesAsync(ct);
+        await unitOfWork.SaveChangesAsync(ct);
     }
 }

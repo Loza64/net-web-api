@@ -9,5 +9,4 @@ public interface IApplicationDbContext
     DbSet<Role> Roles { get; }
     DbSet<Permission> Permissions { get; }
     DbSet<RefreshToken> RefreshTokens { get; }
-    Task<int> SaveChangesAsync(CancellationToken ct = default);
 }

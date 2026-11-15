@@ -16,7 +16,7 @@ public interface IAuthService
     Task LogoutAsync(LogoutRequest request, CancellationToken ct);
 }
 
-public class AuthService(IApplicationDbContext db, IPasswordHasher hasher, ITokenService tokens) : IAuthService
+public class AuthService(IApplicationDbContext db, IUnitOfWork unitOfWork, IPasswordHasher hasher, ITokenService tokens) : IAuthService
 {
     public async Task<AuthResponse> LoginAsync(LoginRequest request, CancellationToken ct)
     {
@@ -57,7 +57,7 @@ public class AuthService(IApplicationDbContext db, IPasswordHasher hasher, IToke
             Role = role
         };
         db.Users.Add(user);
-        await db.SaveChangesAsync(ct);
+        await unitOfWork.SaveChangesAsync(ct);
 
         return await IssueAsync(user, Guid.NewGuid(), ct);
     }
@@ -129,7 +129,7 @@ public class AuthService(IApplicationDbContext db, IPasswordHasher hasher, IToke
             FamilyId = familyId,
             ExpiresAt = refresh.ExpiresAt
         });
-        await db.SaveChangesAsync(ct);
+        await unitOfWork.SaveChangesAsync(ct);
 
         return new AuthResponse(tokens.CreateAccessToken(user), refresh.Raw, user.ToProfileResponse());
     }
