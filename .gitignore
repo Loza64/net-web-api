@@ -6,4 +6,5 @@ TestResults/
 *.user
 
 .env
+*.local.env
 /.config

@@ -10,8 +10,6 @@ using Module.Infrastructure;
 using Module.Infrastructure.Auth;
 using Module.Infrastructure.Persistence.Seeding;
 
-DotNetEnv.Env.NoClobber().TraversePath().Load();
-
 var builder = WebApplication.CreateBuilder(args);
 
 builder.WebHost.ConfigureKestrel((context, options) =>

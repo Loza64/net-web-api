@@ -1,7 +1,5 @@
 <Solution>
   <Folder Name="/Files/">
-    <File Path=".env" />
-    <File Path=".env.example" />
     <File Path="compose.yaml" />
     <File Path="Dockerfile" />
     <File Path="Directory.Build.props" />

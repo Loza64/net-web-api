@@ -34,6 +34,7 @@ public sealed class ModuleApiFactory : WebApplicationFactory<Program>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
+        builder.UseSetting("Jwt:Key", JwtKey);
         builder.ConfigureAppConfiguration((_, configuration) =>
             configuration.AddInMemoryCollection(new Dictionary<string, string?>
             {

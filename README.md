@@ -156,7 +156,6 @@ Las versiones indicadas son las declaradas en los archivos `.csproj` (`*` repres
 
 | Paquete NuGet | Versión | Biblioteca (proyecto) | Uso |
 |---|---:|---|---|
-| `DotNetEnv` | `3.*` | `Module.Api` | Lee `.env` sin reemplazar variables existentes y busca el archivo en directorios superiores. |
 | `Microsoft.AspNetCore.Authentication.JwtBearer` | `10.*` | `Module.Api` | Valida JWT bearer en las solicitudes HTTP. |
 | `Microsoft.AspNetCore.OpenApi` | `10.*` | `Module.Api` | Genera el documento OpenAPI en desarrollo. |
 | `Microsoft.EntityFrameworkCore.Design` | `10.*` | `Module.Api` | Herramientas de diseño y migraciones de EF Core; dependencia privada de desarrollo (`PrivateAssets=all`). |
@@ -174,7 +173,7 @@ Las versiones indicadas son las declaradas en los archivos `.csproj` (`*` repres
 
 ## Configuración
 
-La configuración se define de dos formas: con **User Secrets** (desarrollo local) o con un archivo **`.env`**. Al arrancar, la API carga el `.env` si existe, buscándolo en el directorio actual y en los superiores. Para seguir la convención habitual de variables de entorno, se usan nombres en mayúsculas. En .NET, `__` representa `:` y separa las secciones de configuración: `CONNECTIONSTRINGS__DEFAULT` corresponde a `ConnectionStrings:Default`. Los nombres de configuración no distinguen mayúsculas de minúsculas.
+La configuración local se guarda en **User Secrets** de .NET y se carga automáticamente en el entorno `Development`. Para Docker y despliegues, configura variables en el entorno que inicia el contenedor o en el gestor de secretos de la plataforma. En variables de entorno, `__` representa `:`: `CONNECTIONSTRINGS__DEFAULT` corresponde a `ConnectionStrings:Default`. Los nombres de configuración no distinguen mayúsculas de minúsculas.
 
 | Variable | Requerida | Descripción |
 |---|---|---|
@@ -191,15 +190,7 @@ La configuración se define de dos formas: con **User Secrets** (desarrollo loca
 | `SUPERADMIN__SURNAME` | No | Apellido inicial; por defecto `Admin`. |
 | `DATABASE__MIGRATEONSTARTUP` | No | Permite aplicar migraciones al iniciar fuera de Development si es `true`. |
 
-La aplicación valida la configuración JWT y las credenciales del super admin al iniciar. Si faltan el email o la contraseña del super admin, el inicio falla indicando la configuración requerida. No guardes secretos reales en el repositorio; usa variables de entorno o un gestor de secretos como Azure Key Vault.
-
-### Precedencia de la configuración
-
-Hay dos formas de configurar la API: **User Secrets** y el archivo **`.env`**. Si una misma clave está definida en ambos, **el `.env` tiene prioridad sobre los User Secrets**.
-
-> **Importante:** si existe un `.env` en la raíz del repositorio (o en un directorio superior), sus valores sustituyen a los de User Secrets aunque estos estén bien configurados. Un caso típico es `CONNECTIONSTRINGS__DEFAULT` con el host `oracle` (válido solo dentro de la red de Docker): al ejecutar con `dotnet run` en tu máquina, el driver no puede resolver ese host y falla con `ORA-12154: TNS: no se ha podido resolver el identificador de conexión especificado`, aunque tu secret apunte a `localhost`.
-
-Para usar User Secrets en local, aparta o renombra el `.env` mientras ejecutas con `dotnet run`, o deja en el `.env` valores válidos para tu máquina (por ejemplo, `localhost:1521`).
+La aplicación valida la configuración JWT y las credenciales del super admin al iniciar. Si faltan el email o la contraseña del super admin, el inicio falla indicando la configuración requerida. No guardes secretos reales en el repositorio; usa User Secrets localmente y variables de entorno o un gestor de secretos como Azure Key Vault para despliegues.
 
 Para comprobar qué User Secrets tienes definidos:
 
@@ -209,12 +200,12 @@ dotnet user-secrets list --project .\Module.Api
 
 ### Configurar secretos de usuario para desarrollo local
 
-En lugar de guardar credenciales en `.env` o en archivos versionados, puedes usar User Secrets de .NET. Desde la raíz del repositorio, inicializa el almacén para `Module.Api` y establece los valores necesarios:
+`Module.Api` ya tiene configurado un `UserSecretsId`. Desde la raíz del repositorio, establece ahí los valores necesarios. La cadena de conexión local usa `localhost` porque la API corre en tu máquina:
 
 ```powershell
-dotnet user-secrets init --project .\Module.Api
+# UserSecretsId ya está configurado en Module.Api
 
-dotnet user-secrets set "ConnectionStrings:Default" 'User Id="RBAC-NET";Password=REEMPLAZA_POR_LA_CONTRASENA_ORACLE;Data Source=localhost:1521/ORCLCDB' --project .\Module.Api
+dotnet user-secrets set "ConnectionStrings:Default" 'User Id="RBAC-NET";Password="<contraseña>";Data Source=localhost:1521/ORCLCDB' --project .\Module.Api
 dotnet user-secrets set "Jwt:Issuer" "rbac-api" --project .\Module.Api
 dotnet user-secrets set "Jwt:Audience" "rbac-clients" --project .\Module.Api
 dotnet user-secrets set "Jwt:Key" "REEMPLAZA_POR_UNA_CLAVE_ALEATORIA_DE_AL_MENOS_32_CARACTERES" --project .\Module.Api
@@ -229,46 +220,15 @@ dotnet user-secrets set "Cors:AllowedOrigins:0" "https://app.example.com" --proj
 dotnet user-secrets set "Cors:AllowedOrigins:1" "https://admin.example.com" --project .\Module.Api
 ```
 
-Las comillas simples de PowerShell dejan intactas las comillas dobles de `User Id="RBAC-NET"`; las comillas son necesarias cuando el nombre de usuario contiene un guion. El host es `localhost` porque la API se ejecuta en tu máquina; dentro de Docker se usa el nombre del servicio de Oracle (consulta la sección Docker).
+Las comillas simples de PowerShell dejan intactas las comillas dobles de la cadena. El host es `localhost` porque la API se ejecuta en tu máquina; dentro de Docker se usa el nombre del contenedor Oracle (consulta la sección Docker).
 
 Reemplaza los valores de ejemplo por los de tu entorno. El puerto HTTP predeterminado es `3500`; **no necesitas configurar ningún secreto para usar ese puerto**. Solo si quieres cambiarlo en desarrollo, establece la URL de escucha, reemplazando `3600` por el puerto deseado:
 
 ```powershell
-dotnet user-secrets set "Kestrel:Endpoints:Http:Url" "http://0.0.0.0:3600" --project .\Module.Api
+dotnet user-secrets set "Kestrel:Endpoints:Http:Url" "http://localhost:3600" --project .\Module.Api
 ```
 
-Para CORS, agrega **un comando por cada dominio/origen**, usando índices consecutivos (`:0`, `:1`, `:2`, etc.); por ejemplo, el bloque configura dos dominios. Incluye `https://` (o `http://` en desarrollo local) y el puerto si lo hay. User Secrets se almacena fuera del repositorio y se carga en el entorno `Development`; si una clave también está definida en el `.env`, gana el `.env`, como se explica en [Precedencia de la configuración](#precedencia-de-la-configuración). No publiques credenciales ni claves reales en el README, `.env` u otros archivos versionados.
-
-### Usar un archivo `.env`
-
-La convención del proyecto es usar nombres en mayúsculas y `__` únicamente para separar secciones de .NET (por ejemplo, `JWT__ISSUER`). No agregues guiones bajos para separar palabras dentro de una propiedad, porque cambiaría la clave que recibe el binder de configuración. El archivo `.env.example` es la plantilla canónica y contiene valores ficticios. Para desarrollo local, cópialo a `.env` en la raíz del repositorio y edita los valores:
-
-```powershell
-Copy-Item .env.example .env
-notepad .env
-```
-
-Configura, como mínimo, `CONNECTIONSTRINGS__DEFAULT`, `JWT__ISSUER`, `JWT__AUDIENCE`, `JWT__KEY`, `SUPERADMIN__EMAIL` y `SUPERADMIN__PASSWORD`. El formato del archivo es `NOMBRE=valor`; para una connection string o contraseña que incluya espacios o `;`, encierra el valor entre comillas simples.
-
-```dotenv
-ASPNETCORE_ENVIRONMENT=Development
-API_PORT=3500
-CONNECTIONSTRINGS__DEFAULT='User Id=RBAC-NET;Password=REEMPLAZA_POR_LA_CONTRASENA_ORACLE;Data Source=oracle:1521/ORCLCDB'
-JWT__ISSUER=rbac-api
-JWT__AUDIENCE=rbac-clients
-JWT__KEY=REEMPLAZA_POR_UN_SECRETO_ALEATORIO_DE_AL_MENOS_32_CARACTERES
-SUPERADMIN__EMAIL=admin@example.com
-SUPERADMIN__PASSWORD='ReemplazaEsta123'
-SUPERADMIN__USERNAME=superadmin
-SUPERADMIN__NAME=Super
-SUPERADMIN__SURNAME=Admin
-CORS__ALLOWEDORIGINS__0=https://app.example.com
-CORS__ALLOWEDORIGINS__1=https://admin.example.com
-```
-
-> Este `.env` apunta al host `oracle`, que solo existe dentro de la red de Docker. Si ejecutas la API con `dotnet run`, recuerda que el `.env` tiene prioridad sobre los User Secrets (ver [Precedencia de la configuración](#precedencia-de-la-configuración)).
-
-No subas el `.env` al repositorio. Para despliegues, consulta la sección [Producción](#producción).
+Para CORS, agrega **un comando por cada dominio/origen**, usando índices consecutivos (`:0`, `:1`, `:2`, etc.). Incluye `https://` (o `http://` en desarrollo local) y el puerto si lo hay. User Secrets se almacena fuera del repositorio y se carga en el entorno `Development`. No publiques credenciales ni claves reales en el README u otros archivos versionados.
 
 ### CORS y documentación interactiva
 
@@ -361,27 +321,28 @@ La API usa un Dockerfile multi-stage: compila con el SDK oficial de .NET 10 y pu
 
 ### Iniciar la API junto a Oracle
 
-Primero inicia el Compose de Oracle y asegúrate de que su contenedor esté conectado a la red Docker `oracle_network`. Luego, desde la raíz de este repositorio, crea el archivo local `.env` desde la plantilla y edita la cadena de conexión, los secretos y los orígenes CORS:
+Primero inicia Oracle y asegúrate de que el contenedor esté conectado a la red Docker `oracle_network`. La API ejecutada directamente en tu máquina usa User Secrets y el host `localhost`; la API en Compose debe usar el nombre del contenedor Oracle (`some-oracle`) porque `localhost` dentro de la API apunta al propio contenedor.
+
+Compose recibe sus valores desde las variables de entorno del proceso que lo inicia. No se usa `.env`; establece las variables requeridas en tu terminal o inyéctalas desde el gestor de secretos del entorno. Ejemplo en PowerShell (usa tus valores locales, no los guardes en el repositorio):
 
 ```powershell
-Copy-Item .env.example .env
-notepad .env
-```
-
-La cadena de conexión de ejemplo usa el host `oracle` (nombre del servicio de Oracle en la red Docker), el puerto `1521` y el servicio `ORCLCDB`:
-
-```dotenv
-CONNECTIONSTRINGS__DEFAULT='User Id=RBAC-NET;Password=TU_CONTRASENA_ORACLE;Data Source=oracle:1521/ORCLCDB'
-```
-
-No uses `localhost` como host de Oracle desde el contenedor de la API: ahí `localhost` se refiere al propio contenedor de la API. Por la misma razón, no uses el host `oracle` al ejecutar con `dotnet run` en tu máquina (ahí corresponde `localhost`). La red `oracle_network` está declarada como externa, así que debe existir antes de iniciar Compose; este Compose no crea ni inicia la base de datos. Si el Compose de Oracle todavía no crea esa red con ese nombre, ajusta su configuración de red o usa el nombre real que Docker haya creado.
-
-```powershell
+$env:CONNECTIONSTRINGS__DEFAULT = 'User Id="RBAC-NET";Password="<contraseña>";Data Source=some-oracle:1521/ORCLCDB'
+$env:JWT__ISSUER = 'rbac-api'
+$env:JWT__AUDIENCE = 'rbac-clients'
+$env:JWT__KEY = '<clave JWT>'
+$env:SUPERADMIN__EMAIL = '<correo>'
+$env:SUPERADMIN__PASSWORD = '<contraseña>'
+$env:SUPERADMIN__USERNAME = '<usuario>'
+$env:SUPERADMIN__NAME = '<nombre>'
+$env:SUPERADMIN__SURNAME = '<apellido>'
+$env:CORS__ALLOWEDORIGINS__0 = 'http://localhost:5173'
 docker compose up --build -d
-docker compose logs -f api
+docker compose logs -f app
 ```
 
-Por defecto la API escucha en el puerto `3500` dentro del contenedor y Compose lo publica como `3500` en el host. Con la configuración predeterminada, abre Swagger en **[http://localhost:3500/swagger](http://localhost:3500/swagger)**. **Cambiar el puerto es opcional**: si solo quieres cambiar el puerto del host, define `API_PORT` en `.env` (por ejemplo, `API_PORT=5000`) y Swagger estará en `http://localhost:5000/swagger`; el puerto interno continúa en `3500`. En ejecución local, el puerto predeterminado también es `3500`; solo si quieres cambiarlo, establece `Kestrel:Endpoints:Http:Url` en User Secrets como se mostró arriba. El perfil de inicio abre `http://localhost:3500/swagger`. El valor `ASPNETCORE_ENVIRONMENT=Development` de `.env.example` habilita Swagger localmente; antes de un despliegue de producción, configúralo como `Production`. En producción, suministra los secretos desde el gestor de secretos del entorno en lugar de versionar o copiar un `.env` con valores reales.
+La conexión del contenedor a Oracle usa el hostname `some-oracle`, el puerto `1521` y el servicio `ORCLCDB`. No uses `localhost` desde el contenedor de la API; ahí apunta al propio contenedor. La red `oracle_network` debe existir y Oracle debe estar conectado a ella.
+
+Por defecto la API escucha en el puerto `3500` dentro del contenedor y Compose lo publica como `3500` en el host. El contenedor se ejecuta en `Production` y Swagger permanece deshabilitado; en ejecución local, el perfil de Visual Studio usa `Development` y abre **[http://localhost:3500/swagger](http://localhost:3500/swagger)**. Para cambiar el puerto publicado en el host, define `API_PORT` antes de iniciar Compose; el puerto interno continúa en `3500`. En producción, suministra secretos desde el gestor de secretos del entorno.
 
 Para detener la API sin eliminar la red externa ni el contenedor de Oracle:
 
@@ -391,7 +352,7 @@ docker compose down
 
 ### Solución de problemas: `ORA-12154` al ejecutar en local
 
-Si la API funciona en Docker pero con `dotnet run` falla con `ORA-12154`, la causa habitual es que el `.env` de Docker está pisando tus User Secrets y la API intenta conectarse al host `oracle`, que no existe fuera de la red de Docker. Aparta el `.env` o cambia su host a `localhost` (el `.env` tiene prioridad sobre los User Secrets; ver [Precedencia de la configuración](#precedencia-de-la-configuración)).
+Si la API funciona en Docker pero con `dotnet run` falla con `ORA-12154`, revisa que el User Secret `ConnectionStrings:Default` use `localhost` (el host del contenedor Oracle solo se resuelve dentro de la red Docker).
 
 ## Migraciones y datos existentes
 

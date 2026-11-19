@@ -5,10 +5,19 @@ services:
       dockerfile: Dockerfile
     container_name: net-web-api
     restart: unless-stopped
-    env_file:
-      - .env
     environment:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
+      CONNECTIONSTRINGS__DEFAULT: ${CONNECTIONSTRINGS__DEFAULT:?Set CONNECTIONSTRINGS__DEFAULT in the shell environment}
+      JWT__ISSUER: ${JWT__ISSUER:?Set JWT__ISSUER in the shell environment}
+      JWT__AUDIENCE: ${JWT__AUDIENCE:?Set JWT__AUDIENCE in the shell environment}
+      JWT__KEY: ${JWT__KEY:?Set JWT__KEY in the shell environment}
+      SUPERADMIN__EMAIL: ${SUPERADMIN__EMAIL:?Set SUPERADMIN__EMAIL in the shell environment}
+      SUPERADMIN__PASSWORD: ${SUPERADMIN__PASSWORD:?Set SUPERADMIN__PASSWORD in the shell environment}
+      SUPERADMIN__USERNAME: ${SUPERADMIN__USERNAME:-superadmin}
+      SUPERADMIN__NAME: ${SUPERADMIN__NAME:-Super}
+      SUPERADMIN__SURNAME: ${SUPERADMIN__SURNAME:-Admin}
+      CORS__ALLOWEDORIGINS__0: ${CORS__ALLOWEDORIGINS__0:?Set CORS__ALLOWEDORIGINS__0 in the shell environment}
+      Kestrel__Endpoints__Http__Url: http://0.0.0.0:3500
     ports:
       - "${API_PORT:-3500}:3500"
     networks:
